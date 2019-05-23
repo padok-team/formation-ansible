@@ -1,0 +1,14 @@
+deploystage: devops
+collection: 
+  - apisessions 
+  - appointments 
+  - comments 
+  - databasemigrations 
+  - devices 
+  - files 
+  - organizations 
+  - orphanfiles 
+  - threads 
+  - tokboxsessions 
+  - users 
+  - visioconferences

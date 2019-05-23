@@ -1,0 +1,11 @@
+- name: "Load root token to seal vault"
+  set_fact: root_token_vault="{{ lookup('file','/etc/ansible/ssh_keys/'+deploystage+'_vault/roottoken') }}"
+
+- name: "Login as Root user"
+  shell: "docker exec -it vault-container sh -c \"export VAULT_ADDR=http://127.0.0.1:25355 && vault login {{ root_token_vault }} \""
+  become: yes
+  no_log: true
+
+- name: "Seal the Vault"
+  shell: "docker exec -it vault-container sh -c \"export VAULT_ADDR=http://127.0.0.1:25355 && vault operator seal\""
+  become: yes

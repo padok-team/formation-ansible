@@ -1,0 +1,23 @@
+#Playbook working with ansible 2.7.10
+
+# Extract data from devops, crypt them with vault staging key and send them to staging
+
+# Unseal the vault instance and get the key 
+- hosts: IDOMED_STAGING
+  gather_facts: True
+  roles:
+    - unseal_vault
+    - get_backup_key
+
+# Extract data on devops
+- hosts: IDOMED_DEVOPS
+  gather_facts: True
+  roles:
+    - export_backup_data
+
+# Seal the vault instance 
+- hosts: IDOMED_STAGING
+  gather_facts: True
+  roles:
+    - copy_backup_data
+    - seal_vault

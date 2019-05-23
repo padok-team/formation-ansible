@@ -1,0 +1,16 @@
+# Decrypt db files
+- name: "Decrypt crypted files with key"
+  shell: "openssl enc -d -aes-256-cbc -in {{ item }}.crypt -out {{ item }}.xz -pass pass:{{hostvars['staging']['cryptkey']['stdout']}}"
+  args:
+    chdir: /idomed/bck/db-{{ DEPLOYSTAGE }}/{{ DIRPATH }}
+  with_items: "{{ collection }}"
+  become: yes
+  no_log: true
+
+# Delete all encrypted files
+- name: "Delete crypt files"
+  file:
+    path: "/idomed/bck/db-{{ DEPLOYSTAGE }}/{{ DIRPATH }}/{{ item }}.crypt"
+    state: absent
+  with_items: "{{ collection }}"
+  become: yes

@@ -1,0 +1,74 @@
+- name: "Variable temp with current date time"
+  set_fact: temp="{{ lookup('pipe','date +%Y%m%d-%H.%M.%S') }}"
+
+- name: "Print current date"
+  debug: msg="the current date is {{ temp }}"
+
+# create directory
+- name: "Creates new backup directory"
+  file:
+    path: /idomed/bck/db-{{ deploystage }}/{{ temp }}
+    state: directory
+  become: yes
+
+# backup database
+- name: "Database snapshot backup"
+  shell: "docker exec -it backup-devops.1.$(docker service ps -f \"name=backup-devops.1\" backup-devops -q --no-trunc | head -n1) sh -c \"cd /bck/db-{{ deploystage }}/{{ temp }} && mongoexport -h db-{{ deploystage }} -d idomed_api_db -c {{ item }} -o {{ item }} -u {{ USERNAME }} -p {{ PASSWORD }} --authenticationDatabase admin\""
+  args:
+    chdir: /idomed/bck/db-{{ deploystage }}/{{ temp }}
+  with_items: "{{ collection }}"
+  become: yes
+  no_log: true
+
+- name: "Compress data to xz files"
+  command: "xz -1 {{ item }}"
+  args:
+    chdir: /idomed/bck/db-{{ deploystage }}/{{ temp }}
+  with_items: "{{ collection }}"
+  become: yes
+
+  # write size of the last backup data
+- name: "write size of the last backup data"
+  shell: "du -sb /idomed/bck/db-{{ deploystage }}/{{ temp }} | sed -ne 's/^\\([0-9]\\+\\)\\t\\(.*\\)$/node_directory_size_bytes{directory=\"backup_size\"} \\1/p' > /idomed/bck/node-exporter-data/directory_size.prom.$$ && mv /idomed/bck/node-exporter-data/directory_size.prom.$$ /idomed/bck/node-exporter-data/directory_size.prom"
+  become: yes
+
+# Encrypt db files
+- name: "Encrypt xz files with key"
+  shell: "openssl enc -e -aes-256-cbc -in {{ item }}.xz -out {{ item }}.crypt -pass pass:{{hostvars['staging']['cryptkey']['stdout']}}"
+  args:
+    chdir: /idomed/bck/db-{{ deploystage }}/{{ temp }}
+  with_items: "{{ collection }}"
+  become: yes
+  no_log: true
+
+# Delete all non encrypt file
+- name: "Delete xz files"
+  file:
+    path: "/idomed/bck/db-{{ deploystage }}/{{ temp }}/{{ item }}.xz"
+    state: absent
+  with_items: "{{ collection }}"
+  become: yes
+
+- name: "Files incremental backup"
+  shell: "docker exec -it backup-devops.1.$(docker service ps -f \"name=backup-devops.1\" backup-devops -q --no-trunc | head -n1) sh -c \"cp -urpv /files/* /bck/files-{{ deploystage }}/.\""
+  args:
+    chdir: /idomed/bck/db-{{ deploystage }}/{{ temp }}
+  become: yes
+
+# Bad behavior => best practice is to enable SSH connection between hosts
+- name: "Fetch crypted data to remote"
+  fetch:
+    src: "/idomed/bck/db-{{ deploystage }}/{{ temp }}/{{ item }}.crypt"
+    dest: "/tmp/db-{{ deploystage }}/{{ temp }}/"
+    flat: yes
+  with_items: "{{ collection }}"
+  become: yes
+
+- name: "Delete crypted files"
+  file:
+    path: "/idomed/bck/db-{{ deploystage }}/{{ temp }}/{{ item }}.crypt"
+    state: absent
+  with_items: "{{ collection }}"
+  become: yes
+
+#sleep $BACKUP_PERIOD

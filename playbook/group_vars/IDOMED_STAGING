@@ -1,0 +1,15 @@
+ansible_become_pass: VdlnCiKRFSvz0xoV92xx
+deploystage: staging
+collection: 
+  - apisessions 
+  - appointments 
+  - comments 
+  - databasemigrations 
+  - devices 
+  - files 
+  - organizations 
+  - orphanfiles 
+  - threads 
+  - tokboxsessions 
+  - users 
+  - visioconferences

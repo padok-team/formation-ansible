@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  ansible:
+    container_name: ansible-container
+    build: 
+      context: ./
+    volumes:
+      - ./playbook:/etc/ansible
+    ports:
+      - '25255:25255'
+    command: ansible-playbook -u ubuntu /etc/ansible/backup-save.yml --extra-var "USERNAME=sangoku PASSWORD=CapsuleCorp"
+    # Command to seal and unseal the vault, to execute the backup or decrypt files
+    # ansible-playbook -u ubuntu /etc/ansible/seal-vault.yml
+    # ansible-playbook -u ubuntu /etc/ansible/unseal-vault.yml
+    # ansible-playbook -u ubuntu /etc/ansible/backup-save.yml --extra-var "USERNAME=sangoku PASSWORD=CapsuleCorp"
+    # ansible-playbook -u ubuntu /etc/ansible/backup-decrypt.yml --extra-var "DIRPATH=20190412-08.25.01 DEPLOYSTAGE=devops"
